@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: Dev-1
+      author: Spatium
+      preConditions:
+        - onFail: MARK_RAN
+          not:
+            - tableExists:
+                tableName: users
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                  autoIncrement: true
+              - column:
+                  name: username
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: password
+                  type: varchar(255)
+                  constraints:
+                    nullable: false

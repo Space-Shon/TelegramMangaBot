@@ -1,0 +1,19 @@
+server:
+  port: 8090
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/manga_user_db
+    username: postgres
+    password: spatiumerror88
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    change-log: classpath:db/changelog/changelog.yml
+
+telegram-bot:
+  config:
+    name: manga_avva_bot
+    token: 6696622848:AAGUk6ZGydyrZ_IVtcrmGu5JjiVtjXTMo94
