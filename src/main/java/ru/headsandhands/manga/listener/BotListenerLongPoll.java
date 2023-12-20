@@ -1,25 +1,38 @@
 package ru.headsandhands.manga.listener;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.headsandhands.manga.GeneratePassword.PasswordGenerator;
+import ru.headsandhands.manga.Model.News;
 import ru.headsandhands.manga.Model.User;
 import ru.headsandhands.manga.property.TelegramBotProperty;
+import ru.headsandhands.manga.repository.NewsRepositories;
 import ru.headsandhands.manga.repository.UserRepositories;
 import ru.headsandhands.manga.sender.TelegramBotSender;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 @Component
@@ -29,6 +42,7 @@ public class BotListenerLongPoll extends TelegramLongPollingBot {
     private final TelegramBotProperty telegramBotProperty;
     private final TelegramBotSender telegramBotSender;
     private final UserRepositories userRepositories;
+    private final NewsRepositories newsRepositories;
 
     static final String Help_Text =
             "Dear user, With the help of this bot you can buy manga, comics in full, or chapter by chapter if you don't know what to choosen\n\n"
@@ -39,11 +53,16 @@ public class BotListenerLongPoll extends TelegramLongPollingBot {
     static final String Manga_Button = "Manga";
     static final String Error_Text = "Error occurred: ";
 
-    public BotListenerLongPoll(TelegramBotProperty telegramBotProperty, TelegramBotSender telegramBotSender, UserRepositories userRepositories) {
+    static final String Image1 = "Image 1";
+    static final String Image2 = "Image 2";
+    static final String Image3 = "Image 3";
+
+    public BotListenerLongPoll(TelegramBotProperty telegramBotProperty, TelegramBotSender telegramBotSender, UserRepositories userRepositories, NewsRepositories newsRepositories) {
         super(telegramBotProperty.getToken());
         this.telegramBotProperty = telegramBotProperty;
         this.telegramBotSender = telegramBotSender;
         this.userRepositories = userRepositories;
+        this.newsRepositories = newsRepositories;
         List<BotCommand> botCommandList = new ArrayList<>();
         botCommandList.add(new BotCommand("/start", "Welcome Message"));
         botCommandList.add(new BotCommand("/help", "Info about this bot"));
@@ -81,18 +100,86 @@ public class BotListenerLongPoll extends TelegramLongPollingBot {
 
         }else if(update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
-            long messageId = update.getCallbackQuery().getMessage().getMessageId();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             if (callbackData.equals(Manga_Button)) {
-                String text = "data from database manga";
-                getManga(chatId);
-                executeMessageText(text, chatId, messageId);
+                SendMessage message = new SendMessage();
+                message.setChatId(chatId);
+                message.setText("Which page do you want to select?");
+                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+                List<List<InlineKeyboardButton>> rowsInList = new ArrayList<>();
+                List<InlineKeyboardButton> rowInLine = new ArrayList<>();
+
+                var ImageButton1 = new InlineKeyboardButton();
+                ImageButton1.setText("Image 1");
+                ImageButton1.setCallbackData(Image1);
+
+                rowInLine.add(ImageButton1);
+
+                var ImageButton2 = new InlineKeyboardButton();
+                ImageButton2.setText("Image 2");
+                ImageButton2.setCallbackData(Image2);
+
+                rowInLine.add(ImageButton2);
+
+                var ImageButton3 = new InlineKeyboardButton();
+                ImageButton3.setText("Image 3");
+                ImageButton3.setCallbackData(Image3);
+
+                rowInLine.add(ImageButton3);
+
+                rowsInList.add(rowInLine);
+                markup.setKeyboard(rowsInList);
+                message.setReplyMarkup(markup);
+
+                executeMessage(message);
+            }else if(callbackData.equals(Image1)){
+                try {
+                    String url = "http://localhost:8092/manga/api/getFileByName/241-01.png";
+                    InputStream stream = new URL(url).openStream();
+                    SendPhoto sendPhoto = new SendPhoto();
+                    sendPhoto.setChatId(chatId);
+                    sendPhoto.setPhoto(new InputFile(stream, url));
+                    try {
+                        execute(sendPhoto);
+                    } catch (TelegramApiException e) {
+                        throw new RuntimeException(e);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }else if(callbackData.equals(Image2)){
+                try {
+                    String url = "http://localhost:8092/manga/api/getFileByName/241-02.png";
+                    InputStream stream = new URL(url).openStream();
+                    SendPhoto sendPhoto = new SendPhoto();
+                    sendPhoto.setChatId(chatId);
+                    sendPhoto.setPhoto(new InputFile(stream, url));
+                    try {
+                        execute(sendPhoto);
+                    } catch (TelegramApiException e) {
+                        throw new RuntimeException(e);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            else if(callbackData.equals(Image3)){
+                try {
+                    String url = "http://localhost:8092/manga/api/getFileByName/241-03.png";
+                    InputStream stream = new URL(url).openStream();
+                    SendPhoto sendPhoto = new SendPhoto();
+                    sendPhoto.setChatId(chatId);
+                    sendPhoto.setPhoto(new InputFile(stream, url));
+                    try {
+                        execute(sendPhoto);
+                    } catch (TelegramApiException e) {
+                        throw new RuntimeException(e);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
-
-    }
-    public void getManga(Long chatId){
-        System.out.println("Hello" + chatId);
     }
 
     private void getComics(long chatId) {
@@ -166,10 +253,31 @@ public class BotListenerLongPoll extends TelegramLongPollingBot {
             log.error(Error_Text + e.getMessage());
         }
     }
-
+    private void executePhoto(SendPhoto sendPhoto){
+        try {
+            execute(sendPhoto);
+        } catch (TelegramApiException e) {
+            log.error(Error_Text + e.getMessage());
+        }
+    }
 
     @Override
     public String getBotUsername() {
         return telegramBotProperty.getName();
     }
+
+    @Scheduled(cron = "0 * * * * *")
+    private void sendNews(){
+        var news = newsRepositories.findAll();
+        var user = userRepositories.findAll();
+        for(News news1 : news){
+            for(User user1: user){
+                sendMessage(user1.getId(), news1.getText());
+            }
+        }
+    }
+
+
+
+
 }

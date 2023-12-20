@@ -28,3 +28,33 @@ databaseChangeLog:
                   type: varchar(255)
                   constraints:
                     nullable: false
+  - changeSet:
+      id: Dev-2
+      author: Spatium
+      preConditions:
+        - onFail: MARK_RAN
+          not:
+            - tableExists:
+                tableName: news
+      changes:
+        - createTable:
+            tableName: news
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                  autoIncrement: true
+              - column:
+                  name: text
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+        - insert:
+            tableName: news
+            columns:
+              - column:
+                  name: text
+                  value: "Today's update is Naruto Shippuden Chapter 241 - Kakashi Gaiden"
